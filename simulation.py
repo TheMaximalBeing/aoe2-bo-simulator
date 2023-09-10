@@ -1,0 +1,385 @@
+from buildOrder import *
+from gameData import *
+from gameStart import *
+from utils import *
+from villData import *
+from villNumbers import *
+import copy
+
+class GameState:
+
+  # ===== setup state =====
+
+  def __init__(self):
+
+    # ======== simulation info ========
+
+    # stat record time; format: MM.SS
+    self.dt_stats = convertToSecs(0.30)
+    # time step; format: MM.SS
+    self.dt = convertToSecs(0.01)
+    # end simulation time; format: MM.SS
+    self.endTime = convertToSecs(44.00)
+    # walking-distances
+    self.drop_off = {
+
+      "sheep":0,
+      "boar":0,
+      "deer":1,
+      "berries":2,
+      "farms":3,
+      "stone":2.5,
+      "gold":3.5,
+      "wood":4 }
+    # reassignment penalties
+    self.penalties = {
+
+      "none"   :{ "sheep":3, "boar":3, "deer":5, "berries":14, "farms":9, "stone":20, "gold":17, "wood":19 },
+      "sheep"  :{ "sheep":0, "boar":0, "deer":3, "berries":14, "farms":7, "stone":20, "gold":17, "wood":19 },
+      "boar"   :{ "sheep":0, "boar":0, "deer":3, "berries":14, "farms":7, "stone":20, "gold":17, "wood":19 },
+      "deer"   :{ "sheep":3, "boar":3, "deer":0, "berries":14, "farms":6, "stone":20, "gold":17, "wood":19 },
+      "berries":{ "sheep":10, "boar":10, "deer":10, "berries":0, "farms":6, "stone":20, "gold":17, "wood":19 },
+      "farms"  :{ "sheep":3, "boar":3, "deer":3, "berries":7, "farms":0, "stone":20, "gold":17, "wood":19 },
+      "stone"  :{ "sheep":20, "boar":20, "deer":20, "berries":20, "farms":15, "stone":0, "gold":17, "wood":19 },
+      "gold"   :{ "sheep":17, "boar":17, "deer":17, "berries":17, "farms":15, "stone":20, "gold":0, "wood":19 },
+      "wood"   :{ "sheep":19, "boar":19, "deer":19, "berries":19, "farms":15, "stone":20, "gold":17, "wood":0 } }
+    # the build order
+    self.bo = copy.deepcopy(activeBuildOrder)
+    # building distances
+    self.buildingDistances = initDict(buildings, 8)
+    self.buildingDistances["farm"] = 5
+    self.buildingDistances["barracks"] = 13
+    self.buildingDistances["archery-range"] = 13
+    self.buildingDistances["stable"] = 13
+    self.buildingDistances["blacksmith"] = 13
+    self.buildingDistances["market"] = 13
+
+    # ======== game-state ========
+    
+    # current game time in seconds
+    self.gameTime = 0
+    # current population
+    self.population = 0
+    # current civ
+    self.civ = ""
+    # instantaneous resources gathered; includes specific food types
+    self.stockpilesGathered = initDict(fullResources, 0)
+    # resources gathered + starting resources - resources spent
+    self.stockpiles = initDict(resources, 0)
+    # housing limit
+    self.housing_cap = 0
+    # population limit
+    self.pop_cap = 0
+    # total farms
+    self.farm_count = 0
+
+    # these are objects that we will create when resources become available
+    # format: { name:number-of-overwatches }
+
+    self.overwatch_techs = initDict(techs, 0)
+    self.overwatch_units = initDict(units, 0)
+    self.overwatch_buildings = initDict(buildings, 0)
+
+    # these are buildings that we will create once the builder has arrived
+    # format: [ [name, assigned-count] ]
+
+    self.walking_buildings = [ ]
+
+    # these are objects that are in progress
+    # format: [ [name, progress-time, max-time] ]
+
+    self.pending_techs = [ ]
+    self.pending_units = [ ]
+    self.pending_buildings = [ ]
+
+    # these are the current counts of each object
+    # format { name:count }
+
+    self.done_techs = initDict(techs, 0)
+    self.done_units = initDict(units, 0)
+    self.done_buildings = initDict(buildings, 0)
+
+    # the state of each villager, Format: [ VillData ]
+    self.villager_states = [ ]
+
+    # avaliable resources at map start
+    self.avaliable_res = initDict(fullResources, 0)
+
+    # ======== saved-stats ========
+
+    self.villSpeed = 0
+    self.gatherRates = { }
+    self.housing_headroom = 0
+    self.remaining_res = { }
+    self.free_farms = 0
+    self.ready_buildings = { }
+
+  def applyGameStart(self):
+
+    self.civ = starting_civ
+    self.pop_cap = starting_pop_cap
+    self.avaliable_res |= starting_avail_res
+    self.stockpiles |= starting_stockpiles
+    self.done_techs |= starting_techs
+    self.done_units |= starting_units
+    self.done_buildings |= starting_buildings
+
+  # ===== general helpers =====
+
+  def buyBuilding(self, obj):
+    price = getBuildingCost(obj, self)
+    self.stockpiles["food"] -= price["food"]
+    self.stockpiles["wood"] -= price["wood"]
+    self.stockpiles["stone"] -= price["stone"]
+    self.stockpiles["gold"] -= price["gold"]
+
+  def buyUnit(self, obj):
+    price = getUnitCost(obj, self)
+    self.stockpiles["food"] -= price["food"]
+    self.stockpiles["wood"] -= price["wood"]
+    self.stockpiles["stone"] -= price["stone"]
+    self.stockpiles["gold"] -= price["gold"]
+
+  def buyTech(self, obj):
+    price = getTechCost(obj, self)
+    self.stockpiles["food"] -= price["food"]
+    self.stockpiles["wood"] -= price["wood"]
+    self.stockpiles["stone"] -= price["stone"]
+    self.stockpiles["gold"] -= price["gold"]
+
+  # ===== simulation helpers =====
+
+  def updateStats(self):
+
+    self.population = sum(self.done_units.values())
+    self.housing_cap = getHousingCap(self)
+    self.farm_count = self.done_buildings["farm"]
+    self.villSpeed = getVillagerSpeed(self)
+    self.gatherRates = getGatherRates(gameState)
+    self.housing_headroom = self.population - self.housing_cap
+    self.remaining_res = { k:self.avaliable_res[k] - self.stockpilesGathered[k] for k in fullResources }
+
+    self.free_farms = self.farm_count
+    for v in self.villager_states:
+      if v.gatherType == "farms":
+        self.free_farms -= 1
+
+    self.ready_buildings = copy.deepcopy(self.done_buildings)
+    for x in self.pending_units:
+      self.ready_buildings[unitSite[x[0]]] -= 1
+    for x in self.pending_techs:
+      self.ready_buildings[techSite[x[0]]] -= 1
+
+  def updateLists(self):
+
+    # - check if overwatch items are avaliable
+
+    overwatch_techs_delta = copy.deepcopy(self.overwatch_techs)
+    overwatch_units_delta = copy.deepcopy(self.overwatch_units)
+    overwatch_buildings_delta = copy.deepcopy(self.overwatch_buildings)
+
+    for x in self.pending_techs:
+      overwatch_techs_delta[x[0]] -= 1
+    for x in self.pending_units:
+      overwatch_units_delta[x[0]] -= 1
+    for x in self.pending_buildings:
+      overwatch_buildings_delta[x[0]] -= 1
+
+    for k,v in overwatch_techs_delta.items():
+      if v <= 0: continue
+      if self.ready_buildings[techSite[k]] <= 0: continue
+      if not canAffordTech(k,self): continue
+      if not checkTechAvaliable(k,self.ready_buildings,self): continue
+      # TODO: only do this when done
+      self.overwatch_techs[k] -= 1
+      self.pending_techs.append([k, 0.0, getTechTime(k, self)])
+      self.buyTech(k)
+      self.ready_buildings[techSite[k]] -= 1
+
+    for k,v in overwatch_buildings_delta.items():
+      if v <= 0: continue
+      if not canAffordBuilding(k,self): continue
+      if not checkBuildingAvaliable(k,self.ready_buildings,self): continue
+      # TODO: only do this when done
+      self.overwatch_buildings[k] -= 1
+      self.pending_buildings.append([k, 0.0, getBuildingTime(k, self)])
+      self.buyBuilding(k)
+
+    for k,v in overwatch_units_delta.items():
+      if v <= 0: continue
+      if self.ready_buildings[unitSite[k]] <= 0: continue
+      if not canAffordUnit(k,self): continue
+      if not checkUnitAvaliable(k,self.ready_buildings,self): continue
+      self.pending_units.append([k, 0.0, getUnitTime(k, self)])
+      self.buyUnit(k)
+      self.ready_buildings[unitSite[k]] -= 1
+
+      # - check if pending list items are ready -> add to final list
+
+      for x in self.pending_techs:
+        if x[1] >= x[2]: done_techs[x[0]] += 1
+      for x in self.pending_units:
+        if x[1] >= x[2]: done_units[x[0]] += 1
+      for x in self.pending_buildings:
+        if x[1] >= x[2]: done_buildings[x[0]] += 1
+          
+      self.pending_techs[:] = filter(lambda x: x[1] < x[2], self.pending_techs)
+      self.pending_units[:] = filter(lambda x: x[1] < x[2], self.pending_units)
+      self.pending_buildings[:] = filter(lambda x: x[1] < x[2], self.pending_buildings)
+
+  def checkBuildOrder(self):
+
+    i = -1
+
+    while True:
+
+      i += 1
+      
+      # check if loop should quit
+      if len(self.bo) <= i: break
+      if self.bo[i][0] > self.gameTime: break
+
+      # next BO item is activated!
+      nextItem = self.bo[i]
+
+      # figure out what type it is
+      name = nextItem[1]
+      request = nextItem[2]
+
+      typee = "unit"
+      if name in buildings:
+        typee = "building"
+      elif name in techs:
+        typee = "tech"
+
+      if request == "done":
+
+        if typee == "unit": self.buyUnit(name)
+        if typee == "building": self.buyBuilding(name)
+        if typee == "tech": self.buyTech(name)
+
+        if typee == "unit": self.done_units[name] += 1
+        if typee == "building": self.done_buildings[name] += 1
+        if typee == "tech": self.done_techs[name] += 1
+
+      elif request == "place":
+
+        if typee != "building": raise Exception("invalid")
+        if not checkBuildingAvaliable(name,self.ready_buildings,self): continue
+        self.buyBuilding(name)
+        self.walking_buildings.append([name, 0])
+
+      elif request == "pending":
+
+        if typee == "building":
+          if not checkBuildingAvaliable(name,self.ready_buildings,self): continue
+          self.buyBuilding(name)
+          self.pending_buildings.append([name, 0.0, getBuildingTime(name, self)])
+
+        elif typee == "unit":
+          if not checkUnitAvaliable(name,self.ready_buildings,self): continue
+          if ready_buildings(unitSite[name]) <= 0: continue
+          ready_buildings[unitSite[name]] -= 1
+          self.buyUnit(name)
+          self.pending_units.append([name, 0.0, getUnitTime(name, self)])
+
+        else:
+          if not checkTechAvaliable(name,self.ready_buildings,self): continue
+          if ready_buildings(techSite[name]) <= 0: continue
+          ready_buildings[techSite[name]] -= 1
+          self.buyTech(name)
+          self.pending_techs.append([name, 0.0, getTechTime(name, self)])
+
+      elif request == "on":
+
+        if typee == "building": self.overwatch_buildings[name] += 1
+        if typee == "unit": self.overwatch_units[name] += 1
+        if typee == "tech": self.overwatch_techs[name] += 1
+
+      elif request == "off":
+
+        if typee == "building": self.overwatch_buildings[name] = max(0,self.overwatch_buildings[name]-1)
+        if typee == "unit": self.overwatch_units[name] = max(0,self.overwatch_units[name]-1)
+        if typee == "tech": self.overwatch_techs[name] = max(0,self.overwatch_techs[name]-1)
+
+      else: raise Exception("unknown request")
+
+  def updateVillagers(self):
+
+    # --- assign free vills to walk to foundations
+
+    for x in self.walking_buildings:
+
+      # check if there are no assigned villagers, and assign a villager
+      if x[1] == 0:
+        index = builderSelection(x[0], self)
+        if index == -1: break
+        self.villager_states[index].state = "toBuilding"
+        self.villager_states[index].building = x[0]
+        self.villager_states[index].time = 0
+        self.villager_states[index].maxTime = self.buildingDistances[x[0]]/villSpeed
+        x[1] += 1
+
+    # Note: walking -> pending transition done automatically
+
+    # --- switch food villagers to other food
+
+    switchFVillagers(self)
+
+    # --- reassign villagers
+
+    reassignVillagers(self)
+
+    # --- update villager states
+
+    updateVillagerStates(self)
+
+  def timeStep(self):
+
+    # --- increment villager carry, and farm capacity
+
+    for v in self.villager_states:
+      if v.state == "gather":
+        amount = gatherRates[v.gatherType] * self.dt
+        v.carry += amount
+        if v.gatherType == "farms":
+          v.farmFood -= amount
+        stockpilesGathered[v.gatherType] += amount
+
+    # --- increment action time of villagers
+
+    for v in self.villager_states:
+      v.time += self.dt
+
+    # --- increment progress of pending objects
+
+    for p in self.pending_buildings: p[1] += self.dt
+    for p in self.pending_techs: p[1] += self.dt
+    for p in self.pending_units: p[1] += self.dt
+
+    # --- increment game time
+
+    self.gameTime += self.dt
+
+# ===== main simulation function =====
+
+  def simulate(self):
+
+    while self.gameTime < self.endTime:
+
+      self.updateStats()
+      self.updateLists()
+      self.checkBuildOrder()
+      self.updateVillagers()
+      self.timeStep()
+
+# ===== stats =====
+
+# villager_idle_time = 0
+# building_idle_times = { }
+
+# ===== actual program =====
+
+gameState = GameState()
+gameState.applyGameStart()
+gameState.simulate()
