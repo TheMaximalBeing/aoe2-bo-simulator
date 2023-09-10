@@ -461,28 +461,28 @@ def checkTechAvaliable(obj, ready_buildings, gameState):
 def canAffordBuilding(obj, gameState):
 
   cost = getBuildingCost(obj, gameState)
-  if cost["food"] > gameState.stockpiles["food"]: return False
-  if cost["wood"] > gameState.stockpiles["wood"]: return False
-  if cost["stone"] > gameState.stockpiles["stone"]: return False
-  if cost["gold"] > gameState.stockpiles["gold"]: return False
+  if cost["food"] > max(0,gameState.stockpiles["food"]): return False
+  if cost["wood"] > max(0,gameState.stockpiles["wood"]): return False
+  if cost["stone"] > max(0,gameState.stockpiles["stone"]): return False
+  if cost["gold"] > max(0,gameState.stockpiles["gold"]): return False
   return True
 
 def canAffordUnit(obj, gameState):
 
   cost = getUnitCost(obj, gameState)
-  if cost["food"] > gameState.stockpiles["food"]: return False
-  if cost["wood"] > gameState.stockpiles["wood"]: return False
-  if cost["stone"] > gameState.stockpiles["stone"]: return False
-  if cost["gold"] > gameState.stockpiles["gold"]: return False
+  if cost["food"] > max(0,gameState.stockpiles["food"]): return False
+  if cost["wood"] > max(0,gameState.stockpiles["wood"]): return False
+  if cost["stone"] > max(0,gameState.stockpiles["stone"]): return False
+  if cost["gold"] > max(0,gameState.stockpiles["gold"]): return False
   return True
 
 def canAffordTech(obj, gameState):
 
   cost = getTechCost(obj, gameState)
-  if cost["food"] > gameState.stockpiles["food"]: return False
-  if cost["wood"] > gameState.stockpiles["wood"]: return False
-  if cost["stone"] > gameState.stockpiles["stone"]: return False
-  if cost["gold"] > gameState.stockpiles["gold"]: return False
+  if cost["food"] > max(0,gameState.stockpiles["food"]): return False
+  if cost["wood"] > max(0,gameState.stockpiles["wood"]): return False
+  if cost["stone"] > max(0,gameState.stockpiles["stone"]): return False
+  if cost["gold"] > max(0,gameState.stockpiles["gold"]): return False
   return True
 
 # -- other getters
@@ -525,7 +525,13 @@ def getVillagerSpeed(gameState):
 def getGatherRates(gameState):
 
   # baseline
-  return initDict(fullResources, 0.5)
+  result = initDict(fullResources, 0.33)
+  result["wood"] = 0.39
+  result["gold"] = 0.38
+  result["stone"] = 0.36
+  result["sheep"] = 0.34
+
+  return result
 
 def getHousingCap(gameState):
 

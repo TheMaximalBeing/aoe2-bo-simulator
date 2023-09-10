@@ -54,7 +54,7 @@ for i,r in enumerate(activeVillNumbers):
 
 def getFinalVillNumbers(gameState):
 
-  gameTime = gameState.gameTime
+  gameTime = gameState.gameTime+3*25
   villCount = gameState.done_units["villager"]
 
   # get gameTime just above current

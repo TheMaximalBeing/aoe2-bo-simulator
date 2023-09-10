@@ -2,6 +2,7 @@ from gameData import *
 from utils import *
 from villNumbers import *
 import math
+import copy
 
 class VillData:
 
@@ -46,26 +47,45 @@ class VillData:
 
 # ===== helper functions =====
 
+def getVillIndex(res,vills):
+
+  return argMinValue(vills, lambda x: x.carry if x.gatherTypeSimple() == res and x.state == "gather" else 100000)
+
 wastedTime = initDict(resources,0)
 
 def builderSelection(obj, gameState):
 
+  # get gatherer counts
+
+  counts = initDict(resources, 0)
+  for v in gameState.villager_states:
+    if v.state == "gather":
+      counts[v.gatherTypeSimple()] += 1
+
+  wastedTime2 = copy.deepcopy(wastedTime)
+  if counts["food"] == 0: wastedTime2["food"] += 100000
+  if counts["wood"] == 0: wastedTime2["wood"] += 100000
+  if counts["stone"] == 0: wastedTime2["stone"] += 100000
+  if counts["gold"] == 0: wastedTime2["gold"] += 100000
+
   # decide on F,W,S,G
 
-  res = argMinValue(wastedTime, lambda x: x)
+  res = argMinValue(wastedTime2, lambda x: x)
   if obj == "farm": res = "food"
   if obj == "lumber-camp": res = "wood"
   if obj == "mining-camp": res = "gold"
 
   # get villager of appropriate res
-  vill = argMinValue(list(filter(lambda x: x.gatherTypeSimple() == res, gameState.villager_states)), lambda x: x.carry )
+  vill = getVillIndex(res,gameState.villager_states)
+
+  if gameState.villager_states[vill].state != "gather": return -1
   
   if vill == -1 and obj == "mining-camp":
-    vill = argMinValue(list(filter(lambda x: x.gatherTypeSimple() == "stone", gameState.villager_states)), lambda x: x.carry )
+    vill = getVillIndex(res,gameState.villager_states)
 
   if vill != -1:
     # TODO: also add walking time..
-    wastedTime[res] += getBuildingTime(building, gameState)
+    wastedTime[res] += getBuildingTime(obj, gameState)
   
   return vill
 
@@ -182,20 +202,25 @@ def reassignVillagers(gameState):
     if v.state != "idle": raise Exception("invalid")
 
     v.time = 0
-    v.state = "reasign"
-    v.maxTime = gameState.penalties[v.gatherType][minRes]
+    v.state = "reassign"
     v.gatherType = minRes
     if minRes == "food": v.gatherType = decideFVillager(gameState)
+    v.maxTime = gameState.penalties["none"][v.gatherType]
 
   # get biggest error
   delta = { k : act_numbers[k] - des_numbers[k] for k in act_numbers }
   mainRes = argMinValue(delta, lambda x:-abs(x))
   mainDelta = delta[mainRes]
-  secondRes = argMinValue(delta, lambda x:math.copysign(1.,mainDelta)*abs(x))
+  secondRes = argMinValue(delta, lambda x:math.copysign(1.,mainDelta)*x)
 
   # reassign vill
 
-  if abs(mainDelta) > 0.9:
+  pendingVills = 0
+  for x in gameState.pending_units:
+    if x[0] == "villager":
+      pendingVills += 1
+
+  if abs(mainDelta) > 1.5 or pendingVills == 0 and abs(mainDelta) > 0.9:
 
     fromm = mainRes
     too = secondRes
@@ -204,11 +229,11 @@ def reassignVillagers(gameState):
       fromm = secondRes
       too = mainRes
 
+    i = getVillIndex(fromm,vills)
+    if i == -1: return
+
     act_numbers[fromm] -= 1
     act_numbers[too] += 1
-
-    i = argMinValue(list(filter(lambda x: x.gatherType == fromm and x.state == "gather", vills)), lambda x: x.carry)
-    if i == -1: return
 
     # (instant drop off)
     gameState.stockpiles[vills[i].gatherTypeSimple()] += vills[i].carry
@@ -216,9 +241,9 @@ def reassignVillagers(gameState):
     
     vills[i].state = "reassign"
     vills[i].time = 0
-    vills[i].maxTime = gameState.penalties[fromm][too]
+    if too == "food": too = decideFVillager(gameState)
+    vills[i].maxTime = gameState.penalties[vills[i].gatherType][too]
     vills[i].gatherType = too
-    if vills[i].gatherType == "food": vills[i].gatherType = decideFVillager(gameState)
 
 def updateVillagerStates(gameState):
 
@@ -229,13 +254,13 @@ def updateVillagerStates(gameState):
   for v in vills:
 
     # gather -> drop
-    if v.state == "gather" and v.carry > v.maxCarry:
+    if v.state == "gather" and v.carry >= v.maxCarry:
       v.state = "drop"
       v.time = 0
       v.maxTime = gameState.drop_off[v.gatherType] / speed
 
     # drop -> return
-    if v.state == "drop" and v.time > v.maxTime:
+    if v.state == "drop" and v.time >= v.maxTime:
       v.state = "return"
       v.time = 0
       v.maxTime = gameState.drop_off[v.gatherType] / speed
@@ -243,13 +268,13 @@ def updateVillagerStates(gameState):
       v.carry = 0
 
     # return -> gather
-    if v.state == "return" and v.time > v.maxTime:
+    if v.state == "return" and v.time >= v.maxTime:
       v.state = "gather"
       v.time = 0
       v.maxCarry = getMaxCarry(v.gatherType, gameState)
 
     # gather -> reseed
-    if v.state == "gather" and v.farmFood <= 0:
+    if v.state == "gather" and v.farmFood <= 0 and v.gatherType == "farms":
       v.state = "reseed"
       v.time = 0
       v.maxTime = getBuildingTime("farm", gameState)
@@ -257,10 +282,10 @@ def updateVillagerStates(gameState):
       # Note: reseeds don't go into the pending list!
 
     # reseed -> gather
-    if v.state == "reseed" and v.time > v.maxTime:
+    if v.state == "reseed" and v.time >= v.maxTime:
       v.state = "gather"
       v.time = 0
-      v.farmFood = getFarmFood(gameData)
+      v.farmFood = getFarmFood(gameState)
       gameState.stockpiles["food"] += v.carry
       v.carry = 0
 
@@ -268,7 +293,7 @@ def updateVillagerStates(gameState):
     # (done elsewhere)
 
     # toBuilding -> build
-    if v.state == "toBuilding" and v.time > v.maxTime:
+    if v.state == "toBuilding" and v.time >= v.maxTime:
       v.state = "build"
       v.time = 0
       v.maxTime = getBuildingTime(v.building, gameState)
@@ -281,7 +306,7 @@ def updateVillagerStates(gameState):
       gameState.pending_buildings.append([v.building, 0, v.maxTime])
       
     # build -> fromBuilding, gather
-    if v.state == "build" and v.time > v.maxTime:
+    if v.state == "build" and v.time >= v.maxTime:
       v.time = 0
       
       if v.building in ["farm", "lumber-camp", "mining-camp", "mill", "town-center"]:
@@ -299,7 +324,7 @@ def updateVillagerStates(gameState):
         v.maxTime = getBuildingTime(v.building, gameState)
 
     # fromBuilding -> gather
-    if v.state == "fromBuilding" and v.time > v.maxTime:
+    if v.state == "fromBuilding" and v.time >= v.maxTime:
       v.state = "gather"
       v.time = 0
       v.maxCarry = getMaxCarry(v.gatherType, gameState)
@@ -308,7 +333,7 @@ def updateVillagerStates(gameState):
     # (done elsewhere)
 
     # lure -> gather
-    if v.state == "lure" and v.time > v.maxTime:
+    if v.state == "lure" and v.time >= v.maxTime:
       v.state = "gather"
       v.time = 0
       v.maxCarry = getMaxCarry(v.gatherType, gameState)
@@ -317,7 +342,7 @@ def updateVillagerStates(gameState):
     # (done elsewhere)
 
     # reassign -> gather
-    if v.state == "reassign" and v.time > v.maxTime:
+    if v.state == "reassign" and v.time >= v.maxTime:
       v.state = "gather"
       v.time = 0
       v.maxCarry = getMaxCarry(v.gatherType, gameState)

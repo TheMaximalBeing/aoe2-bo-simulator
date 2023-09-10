@@ -15,11 +15,11 @@ class GameState:
     # ======== simulation info ========
 
     # stat record time; format: MM.SS
-    self.dt_stats = convertToSecs(0.30)
+    self.dt_stats = convertToSecs(0.25)
     # time step; format: MM.SS
     self.dt = convertToSecs(0.01)
     # end simulation time; format: MM.SS
-    self.endTime = convertToSecs(44.00)
+    self.endTime = convertToSecs(22.00)
     # walking-distances
     self.drop_off = {
 
@@ -29,19 +29,19 @@ class GameState:
       "berries":2,
       "farms":3,
       "stone":2.5,
-      "gold":3.5,
-      "wood":4 }
+      "gold":2.5,
+      "wood":0.5 }
     # reassignment penalties
     self.penalties = {
 
-      "none"   :{ "sheep":3, "boar":3, "deer":5, "berries":14, "farms":9, "stone":20, "gold":17, "wood":19 },
-      "sheep"  :{ "sheep":0, "boar":0, "deer":3, "berries":14, "farms":7, "stone":20, "gold":17, "wood":19 },
-      "boar"   :{ "sheep":0, "boar":0, "deer":3, "berries":14, "farms":7, "stone":20, "gold":17, "wood":19 },
-      "deer"   :{ "sheep":3, "boar":3, "deer":0, "berries":14, "farms":6, "stone":20, "gold":17, "wood":19 },
-      "berries":{ "sheep":10, "boar":10, "deer":10, "berries":0, "farms":6, "stone":20, "gold":17, "wood":19 },
-      "farms"  :{ "sheep":3, "boar":3, "deer":3, "berries":7, "farms":0, "stone":20, "gold":17, "wood":19 },
-      "stone"  :{ "sheep":20, "boar":20, "deer":20, "berries":20, "farms":15, "stone":0, "gold":17, "wood":19 },
-      "gold"   :{ "sheep":17, "boar":17, "deer":17, "berries":17, "farms":15, "stone":20, "gold":0, "wood":19 },
+      "none"   :{ "sheep":3, "boar":3, "deer":5, "berries":14, "farms":9, "stone":20, "gold":17, "wood":16 },
+      "sheep"  :{ "sheep":0, "boar":0, "deer":3, "berries":14, "farms":7, "stone":20, "gold":17, "wood":6 },
+      "boar"   :{ "sheep":0, "boar":0, "deer":3, "berries":14, "farms":7, "stone":20, "gold":17, "wood":16 },
+      "deer"   :{ "sheep":3, "boar":3, "deer":0, "berries":14, "farms":6, "stone":20, "gold":17, "wood":16 },
+      "berries":{ "sheep":10, "boar":10, "deer":10, "berries":0, "farms":6, "stone":20, "gold":17, "wood":16 },
+      "farms"  :{ "sheep":3, "boar":3, "deer":3, "berries":7, "farms":0, "stone":20, "gold":17, "wood":16 },
+      "stone"  :{ "sheep":20, "boar":20, "deer":20, "berries":20, "farms":15, "stone":0, "gold":17, "wood":16 },
+      "gold"   :{ "sheep":17, "boar":17, "deer":17, "berries":17, "farms":15, "stone":20, "gold":0, "wood":16 },
       "wood"   :{ "sheep":19, "boar":19, "deer":19, "berries":19, "farms":15, "stone":20, "gold":17, "wood":0 } }
     # the build order
     self.bo = copy.deepcopy(activeBuildOrder)
@@ -114,6 +114,14 @@ class GameState:
     self.free_farms = 0
     self.ready_buildings = { }
 
+
+    # ======== recorded-stats ========
+
+    self.rec_res_collected = [ ]
+    self.rec_stockpiles = [ ]
+    self.rec_civilian_pop = [ ]
+    self.rec_military_pop = [ ]
+
   def applyGameStart(self):
 
     self.civ = starting_civ
@@ -156,7 +164,7 @@ class GameState:
     self.farm_count = self.done_buildings["farm"]
     self.villSpeed = getVillagerSpeed(self)
     self.gatherRates = getGatherRates(gameState)
-    self.housing_headroom = self.population - self.housing_cap
+    self.housing_headroom = self.housing_cap-self.population
     self.remaining_res = { k:self.avaliable_res[k] - self.stockpilesGathered[k] for k in fullResources }
 
     self.free_farms = self.farm_count
@@ -171,6 +179,26 @@ class GameState:
       self.ready_buildings[techSite[x[0]]] -= 1
 
   def updateLists(self):
+
+    # - check if pending list items are ready -> add to final list
+
+    for x in self.pending_techs:
+      if x[1] >= x[2]: 
+        self.done_techs[x[0]] += 1
+        site = techSite[x[0]]
+        self.ready_buildings[site] = min(self.done_buildings[site],self.ready_buildings[site]+1)
+    for x in self.pending_units:
+      if x[1] >= x[2]: 
+        self.done_units[x[0]] += 1
+        site = unitSite[x[0]]
+        self.ready_buildings[site] = min(self.done_buildings[site],self.ready_buildings[site]+1)
+    for x in self.pending_buildings:
+      if x[1] >= x[2]: 
+        self.done_buildings[x[0]] += 1
+    
+    self.pending_techs[:] = filter(lambda x: x[1] < x[2], self.pending_techs)
+    self.pending_units[:] = filter(lambda x: x[1] < x[2], self.pending_units)
+    self.pending_buildings[:] = filter(lambda x: x[1] < x[2], self.pending_buildings)
 
     # - check if overwatch items are avaliable
 
@@ -214,27 +242,17 @@ class GameState:
       self.buyUnit(k)
       self.ready_buildings[unitSite[k]] -= 1
 
-      # - check if pending list items are ready -> add to final list
-
-      for x in self.pending_techs:
-        if x[1] >= x[2]: done_techs[x[0]] += 1
-      for x in self.pending_units:
-        if x[1] >= x[2]: done_units[x[0]] += 1
-      for x in self.pending_buildings:
-        if x[1] >= x[2]: done_buildings[x[0]] += 1
-          
-      self.pending_techs[:] = filter(lambda x: x[1] < x[2], self.pending_techs)
-      self.pending_units[:] = filter(lambda x: x[1] < x[2], self.pending_units)
-      self.pending_buildings[:] = filter(lambda x: x[1] < x[2], self.pending_buildings)
-
   def checkBuildOrder(self):
+
+    if self.gameTime >= 350:
+      pass
 
     i = -1
 
     while True:
 
       i += 1
-      
+
       # check if loop should quit
       if len(self.bo) <= i: break
       if self.bo[i][0] > self.gameTime: break
@@ -262,6 +280,9 @@ class GameState:
         if typee == "building": self.done_buildings[name] += 1
         if typee == "tech": self.done_techs[name] += 1
 
+        del self.bo[i]
+        i -= 1
+
       elif request == "place":
 
         if typee != "building": raise Exception("invalid")
@@ -269,12 +290,17 @@ class GameState:
         self.buyBuilding(name)
         self.walking_buildings.append([name, 0])
 
+        del self.bo[i]
+        i -= 1
+
       elif request == "pending":
 
         if typee == "building":
           if not checkBuildingAvaliable(name,self.ready_buildings,self): continue
           self.buyBuilding(name)
           self.pending_buildings.append([name, 0.0, getBuildingTime(name, self)])
+          del self.bo[i]
+          i -= 1
 
         elif typee == "unit":
           if not checkUnitAvaliable(name,self.ready_buildings,self): continue
@@ -282,29 +308,41 @@ class GameState:
           ready_buildings[unitSite[name]] -= 1
           self.buyUnit(name)
           self.pending_units.append([name, 0.0, getUnitTime(name, self)])
+          del self.bo[i]
+          i -= 1
 
         else:
           if not checkTechAvaliable(name,self.ready_buildings,self): continue
-          if ready_buildings(techSite[name]) <= 0: continue
-          ready_buildings[techSite[name]] -= 1
+          if self.ready_buildings[techSite[name]] <= 0: continue
+          self.ready_buildings[techSite[name]] -= 1
           self.buyTech(name)
           self.pending_techs.append([name, 0.0, getTechTime(name, self)])
+          del self.bo[i]
+          i -= 1
 
       elif request == "on":
 
         if typee == "building": self.overwatch_buildings[name] += 1
         if typee == "unit": self.overwatch_units[name] += 1
         if typee == "tech": self.overwatch_techs[name] += 1
+        del self.bo[i]
+        i -= 1
 
       elif request == "off":
 
         if typee == "building": self.overwatch_buildings[name] = max(0,self.overwatch_buildings[name]-1)
         if typee == "unit": self.overwatch_units[name] = max(0,self.overwatch_units[name]-1)
         if typee == "tech": self.overwatch_techs[name] = max(0,self.overwatch_techs[name]-1)
+        del self.bo[i]
+        i -= 1
 
       else: raise Exception("unknown request")
 
   def updateVillagers(self):
+
+    # --- reassign villagers
+
+    reassignVillagers(self)
 
     # --- assign free vills to walk to foundations
 
@@ -317,7 +355,7 @@ class GameState:
         self.villager_states[index].state = "toBuilding"
         self.villager_states[index].building = x[0]
         self.villager_states[index].time = 0
-        self.villager_states[index].maxTime = self.buildingDistances[x[0]]/villSpeed
+        self.villager_states[index].maxTime = self.buildingDistances[x[0]]/self.villSpeed
         x[1] += 1
 
     # Note: walking -> pending transition done automatically
@@ -325,10 +363,6 @@ class GameState:
     # --- switch food villagers to other food
 
     switchFVillagers(self)
-
-    # --- reassign villagers
-
-    reassignVillagers(self)
 
     # --- update villager states
 
@@ -340,11 +374,11 @@ class GameState:
 
     for v in self.villager_states:
       if v.state == "gather":
-        amount = gatherRates[v.gatherType] * self.dt
+        amount = self.gatherRates[v.gatherType] * self.dt
         v.carry += amount
         if v.gatherType == "farms":
           v.farmFood -= amount
-        stockpilesGathered[v.gatherType] += amount
+        self.stockpilesGathered[v.gatherType] += amount
 
     # --- increment action time of villagers
 
@@ -361,6 +395,26 @@ class GameState:
 
     self.gameTime += self.dt
 
+  def record(self):
+
+    if self.gameTime % self.dt_stats == 0:
+
+      civ_pop = sum([v for k,v in self.done_units.items() if k == "villager"])
+      mil_pop = sum([v for k,v in self.done_units.items() if k != "villager"])
+
+      print("--------------------")
+      print("time: ", self.gameTime, " time: ", self.gameTime // 60, ":", self.gameTime % 60, " civ: ", self.done_units["villager"], " mil: ", mil_pop)
+      print("F: ", int(self.stockpiles["food"]), " W: ", int(self.stockpiles["wood"]), " S: " , int(self.stockpiles["stone"]), " G: ", int(self.stockpiles["gold"]))
+      print("techs: ", " ".join([k for k,v in self.done_techs.items() if v > 0]))
+      print("build: ", " ".join([k+":"+str(v) for k,v in self.done_buildings.items() if v > 0]))
+      # full vill distribution
+      # reassignments
+      # reassignment times, gather times, drop times, building times
+
+      # self.rec_stockpiles.append([self.stockpiles["food"], self.stockpiles["wood"], self.stockpiles["stone"], self.stockpiles["gold"]])
+      # self.rec_civilian_pop.append(civ_pop)
+      # self.rec_military_pop.append(mil_pop)
+
 # ===== main simulation function =====
 
   def simulate(self):
@@ -368,6 +422,7 @@ class GameState:
     while self.gameTime < self.endTime:
 
       self.updateStats()
+      self.record()
       self.updateLists()
       self.checkBuildOrder()
       self.updateVillagers()
@@ -383,3 +438,6 @@ class GameState:
 gameState = GameState()
 gameState.applyGameStart()
 gameState.simulate()
+
+
+pass
