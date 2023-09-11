@@ -57,6 +57,12 @@ def getFinalVillNumbers(gameState):
   gameTime = gameState.gameTime+3*25
   villCount = gameState.done_units["villager"]
 
+  if gameState.done_techs["loom"] > 0:
+    gameTime -= 25
+
+  if gameState.done_techs["wheelbarrow"] > 0:
+    gameTime -= 75
+
   # get gameTime just above current
   i2 = 0
   while i2 < len(activeVillNumbers) and activeVillNumbers[i2][0] <= gameTime:

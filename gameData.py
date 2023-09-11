@@ -519,17 +519,60 @@ def getFishTrapFood(gameState):
 
 def getVillagerSpeed(gameState):
 
-  # baseline
-  return 0.8
+  # (*) baseline
+  result = 0.8
+
+  # (*) civ-bonuses
+  
+  # (*) team-bonuses
+  
+  # (*) tech-bonuses (standerd, unique)
+
+  if gameState.done_techs["wheelbarrow"] > 0: result *= 1.1
+  # if gameState.done_techs["hand-cart"] > 0: result *= 1.1
+  # if gameState.civ == "bohemians" and gameState.done_techs["fervor"] > 0: result *= 1.15
+  
+  # (*) unique-buildings (folwark, caravanserai)
+
+  return result
 
 def getGatherRates(gameState):
 
-  # baseline
+  # (*) baseline
   result = initDict(fullResources, 0.33)
-  result["wood"] = 0.39
-  result["gold"] = 0.38
-  result["stone"] = 0.36
-  result["sheep"] = 0.34
+  result["fish"] = 0.426
+  result["boar"] = 0.408
+  result["deer"] = 0.408
+  result["wood"] = 0.388
+  result["gold"] = 0.379
+  result["stone"] = 0.359
+  result["sheep"] = 0.330
+  # result["farms"] = 0.33 # max 0.40 due to farm res rate
+  result["farms"] = 0.32
+  result["berries"] = 0.310
+
+  # (*) civ-bonuses
+
+  if gameState.civ == "celts": result["wood"] *= 1.2
+  
+  # (*) team-bonuses
+  
+  # (*) tech-bonuses (standerd, unique)
+
+  if gameState.done_techs["double-bit-axe"] > 0: result["wood"] *= 1.2
+  # if gameState.done_techs["bow-saw"] > 0: result["wood"] *= 1.2
+  # if gameState.done_techs["two-man-saw"] > 0: result["wood"] *= 1.1
+  if gameState.done_techs["stone-mining"] > 0: result["stone"] *= 1.15
+  # if gameState.done_techs["stone-shaft-mining"] > 0: result["stone"] *= 1.15
+  if gameState.done_techs["gold-mining"] > 0: result["gold"] *= 1.15
+  # if gameState.done_techs["gold-shaft-mining"] > 0: result["gold"] *= 1.15
+  # if gameState.done_techs["grand-trunk-road"] > 0: result["gold"] *= 1.10
+  if gameState.done_techs["wheelbarrow"] > 0: result["farms"] = 0.37 # need to do proper testing for these
+  # if gameState.done_techs["hand-cart"] > 0: result["farms"] = 0.40
+  
+  # (*) unique-buildings (folwark, caravanserai)
+
+
 
   return result
 
@@ -548,5 +591,39 @@ def getHousingCap(gameState):
 
 def getMaxCarry(gatherType, gameState):
 
-  # baseline
-  return 10
+  result = 10
+
+  # (*) baseline
+
+  if gatherType == "sheep":
+    pass
+  elif gatherType == "boar":
+    result = 10 # allow drops
+  elif gatherType == "deer":
+    result = 35
+  elif gatherType == "berries":
+    pass
+  elif gatherType == "fish":
+    pass
+  elif gatherType == "farms":
+    pass
+  elif gatherType == "wood":
+    pass
+  elif gatherType == "stone":
+    pass
+  elif gatherType == "gold":
+    pass
+
+  # (*) civ-bonuses
+
+  # (*) team-bonuses
+  
+  # (*) tech-bonuses (standerd, unique)
+
+  if gameState.done_techs["wheelbarrow"] > 0: result *= 1.25
+  # if gameState.done_techs["hand-cart"] > 0: result *= 1.50
+  # if gatherType == "farms" and gameState.done_techs["heavy-plow"] > 0: result += 1
+
+  # (*) unique-buildings (folwark, caravanserai)
+
+  return result

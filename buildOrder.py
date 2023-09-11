@@ -76,10 +76,10 @@ buildOrders["FF-SCOUT-FLUSH"] =  [
   [0.00, "skirmisher", "on"],
 
   # techs
-  [17.00, "loom",           "on"],
+  [7.04, "loom",           "on"],
   [0.00, "fletching",       "on"],
   [17.00, "wheelbarrow",    "on"],
-  [8.20, "feudal-age",      "on"],
+  [7.54, "feudal-age",      "on"],
   [18.00, "castle-age",     "on"],
   [10.30, "double-bit-axe", "pending"],
   [10.30, "horse-collar",   "pending"],

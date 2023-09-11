@@ -49,11 +49,25 @@ class VillData:
 
 def getVillIndex(res,vills):
 
-  return argMinValue(vills, lambda x: x.carry if x.gatherTypeSimple() == res and x.state == "gather" else 100000)
+  minValue = 1e50
+  minKey = -1
+
+  for i,v in enumerate(vills):
+
+    val = v.carry
+    if v.state != "gather": val += 100000
+    if v.gatherTypeSimple() != res: val += 10000
+    if v.gatherType == "farms": val += 50
+    if val < minValue:
+      minValue = val
+      minKey = i
+  return minKey
 
 wastedTime = initDict(resources,0)
 
 def builderSelection(obj, gameState):
+
+  global wastedTime
 
   # get gatherer counts
 
@@ -70,10 +84,15 @@ def builderSelection(obj, gameState):
 
   # decide on F,W,S,G
 
+  # !!!!
+  if gameState.done_units["villager"] >= 21:
+    res = "food"
+
   res = argMinValue(wastedTime2, lambda x: x)
   if obj == "farm": res = "food"
   if obj == "lumber-camp": res = "wood"
   if obj == "mining-camp": res = "gold"
+
 
   # get villager of appropriate res
   vill = getVillIndex(res,gameState.villager_states)
@@ -148,15 +167,42 @@ def decideFVillager(gameState):
 
 # ===== main functions =====
 
+def findGatherer(res, gameState):
+
+  minIndex = -1
+  minRes = 10000
+
+  for i,v in enumerate(gameState.villager_states):
+    if v.gatherType != res: continue
+    if v.state != "gather": continue
+    if v.carry < minRes:
+      minRes = v.carry
+      minIndex = i
+
+  return minIndex
+
+def reassign(fromm, too, gameState):
+
+  i = findGatherer(fromm, gameState)
+  if i == -1: return
+  v = gameState.villager_states[i]
+  v.state = "reassign"
+  v.time = 0
+  v.maxTime = gameState.penalties[v.gatherType][too]
+  v.gatherType = too
+
+
+lureCount = 0
+
 def switchFVillagers(gameState):
 
-  # 6 sheep -> boar when 7 vills
+  global lureCount
+  remaining = { x:gameState.avaliable_res[x] - gameState.stockpilesGathered[x] for x in fullResources }
+  villCount = gameState.done_units["villager"]
 
-  # add lurers
-
-  # deer when no sheep
-
-  # 8-11 go on berries
+  counts = initDict(fullResources, 0)
+  for v in gameState.villager_states:
+    counts[v.gatherType] += 1
 
   # if any idle farms then populate them
 
@@ -171,6 +217,66 @@ def switchFVillagers(gameState):
         v.time = 0
         gameState.free_farms -= 1
         break
+
+  # add lurers
+  if villCount >= 7 and lureCount == 0 or villCount >= 13 and lureCount == 1:
+    i = findGatherer("sheep", gameState)
+    if i == -1: i = findGatherer("boar", gameState)
+    if i != -1:
+      v = gameState.villager_states[i]
+      v.time = 0
+      v.maxTime = 2*gameState.boarDist/gameState.villSpeed
+      v.state = "lure"
+      lureCount += 1
+
+  # 6 sheep -> boar when 7 vills
+  if villCount >= 7 and counts["boar"] < 7 and counts["sheep"] > 0 and remaining["boar"] > 50:
+    reassign("sheep", "boar", gameState)
+    return
+
+  # 8-11 go on berries
+  if counts["boar"] + counts["sheep"] > 8 and counts["sheep"] > 0 and counts["berries"] < 4 and remaining["berries"] > 50:
+    reassign("sheep", "berries", gameState)
+    return
+
+  # (low-res) sheep -> boar
+  if remaining["sheep"] <= 0 and remaining["boar"] > 50 and counts["sheep"] > 0:
+    reassign("sheep", "boar", gameState)
+    return
+
+  # (low-res) boar -> sheep
+  if remaining["sheep"] > 50 and remaining["boar"] <= 0 and counts["boar"] > 0:
+    reassign("boar", "sheep", gameState)
+    return
+
+  # (low-res) boar,sheep -> deer
+  if remaining["sheep"] <= 0 and remaining["boar"] <= 0 and remaining["deer"] > 50 and counts["sheep"] > 0:
+    reassign("sheep", "deer", gameState)
+    return
+
+  # (low-res) boar,sheep -> deer
+  if remaining["sheep"] <= 0 and remaining["boar"] <= 0 and remaining["deer"] > 50 and counts["boar"] > 0:
+    reassign("boar", "deer", gameState)
+    return
+
+  # (low-res) boar,sheep,deer -> berries
+  if remaining["sheep"] <= 0 and remaining["boar"] <= 0 and remaining["deer"] <= 0 and remaining["berries"] > 50 and counts["sheep"] > 0:
+    reassign("sheep", "berries", gameState)
+    return
+
+  # (low-res) boar,sheep,deer -> berries
+  if remaining["sheep"] <= 0 and remaining["boar"] <= 0 and remaining["deer"] <= 0 and remaining["berries"] > 50 and counts["boar"] > 0:
+    reassign("boar", "berries", gameState)
+    return
+
+  # (low-res) boar,sheep,deer -> berries
+  if remaining["sheep"] <= 0 and remaining["boar"] <= 0 and remaining["deer"] <= 0 and remaining["berries"] > 50 and counts["deer"] > 0:
+    reassign("deer", "berries", gameState)
+    return
+
+  # berries -> farms
+  # todo...
+
 
 def reassignVillagers(gameState):
 
@@ -219,6 +325,11 @@ def reassignVillagers(gameState):
   for x in gameState.pending_units:
     if x[0] == "villager":
       pendingVills += 1
+
+  # no reassignments when researching loom, wheelbarrow, hand-cart, etc
+  for x in gameState.pending_techs:
+    if x[0] in ["loom", "wheelbarrow", "hand-cart"]:
+      return
 
   if abs(mainDelta) > 1.5 or pendingVills == 0 and abs(mainDelta) > 0.9:
 

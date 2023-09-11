@@ -1,9 +1,10 @@
-# proper usage of stockpiles
-# monitoring
 # plots and stats
 # update maxCarry upon new tech
 # add instant W chopping for build LC
 # make sure we are using the data helpers!!
+# animal decay
+# chop down trees??
+# farm reassign bug??
 
 # ======== limitations ========
 
