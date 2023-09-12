@@ -107,7 +107,7 @@ buildOrders["FF-FLUSH"] =  [
 
 ]
 
-activeBuildOrder = buildOrders["FF-SCOUT-FLUSH"]
+activeBuildOrder = buildOrders["FF-FLUSH"]
 
 # convert to seconds
 
