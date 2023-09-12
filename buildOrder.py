@@ -90,6 +90,7 @@ buildOrders["FF-FLUSH"] =  [
   [0.00, "archer",     "on"],
   [0.00, "skirmisher", "on"],
   [0.00, "skirmisher", "on"],
+  [19.00, "archer",     "off"],
 
   # techs
   # [7.04, "loom",           "on"],
