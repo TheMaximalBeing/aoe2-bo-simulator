@@ -1,6 +1,6 @@
 # **Age of Empires II - Build Order Simulator**
 
-***Note: this program is still very unfinished and lacks most civ bonuses and anything beyond castle age***
+***Note: this tool is still very unfinished and lacks most civ bonuses and anything beyond castle age***
 
 ### *a tool for testing your custom build order*
 
