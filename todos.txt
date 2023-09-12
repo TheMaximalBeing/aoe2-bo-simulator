@@ -1,0 +1,49 @@
+- simulation accuracy
+  * update maxCarry upon new tech
+  * add instant W chopping for build LC
+  * proper animal decay (rather than hacky ratios)
+  * chop down trees
+  * changing drop-off distances
+  * bumping / inefficiencies when too many vills on 1 camp
+  * drop-offs
+  * properly consider villagers shooting boar (rather than hacky penalties)
+  * drop resources before reassignment (rather than add them)
+  * delay for luring time
+
+- optimization
+  * ensure penalties are accurate
+  * ensure drop-off distances are accurate
+  * ensure farming gather rates are accurate
+  * ensure boar distance is accurate
+
+- boar 0 reassign bug?
+- civ bonuses
+- team bonusses
+- standard techs
+- unique techs
+- unique buildings
+- add fishing ships as gatherers
+- add trade carts/trade cogs as gatherers
+- add relics as gatherers
+- add feitorias as gatherers
+
+- better builder selection
+- pull vills from sheep before berries (unless more than 4)
+- options to adjust builder selection
+- test other build-orders
+- test stockpilesPlusCarry against real game data
+
+- add warnings:
+  * when run out of natural resources
+  * when stockpiles go too negative
+  * when housing headroom goes negative
+  * when over-foraging
+  * when overwatch items blocked due to resources
+
+- generate plots
+- make sure we are using the data helpers!!
+
+- recorded data
+  * stockpiles + carry
+  * housing headroom
+  * idle farms
