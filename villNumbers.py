@@ -4,7 +4,7 @@ villNumbers = { }
 
 # Format: [ [vills,age,F,W,G,S] ]
 
-villNumbers["FF-SCOUT-FLUSH"] = [
+villNumbers["FF-FLUSH"] = [
 
   [ 0,0.0, 0,0,0,0],
   [ 7,0.0, 7,0,0,0],
@@ -31,7 +31,7 @@ villNumbers["FF-SCOUT-FLUSH"] = [
 # ----------------------------------------------
 
 # select active villager numbers
-activeVillNumbers =  villNumbers["FF-SCOUT-FLUSH"]
+activeVillNumbers =  villNumbers["FF-FLUSH"]
 if len(activeVillNumbers) < 2: raise Exception("villNumbers lists must have a length of at least 2")
 if activeVillNumbers[0][0] != 0: raise Exception("villNumbers lists must start at time 0")
 

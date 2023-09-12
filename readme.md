@@ -47,7 +47,7 @@ With this tool you can answer the following:
 
 1. Install Python and a suitable text editor such as VS code
 2. open *gameStart.py* and select your civ. Adjust any other info there to your liking
-3. Open *villNumbers.py* and see example 'villNumbers["FF-SCOUT-FLUSH"]'. Copy this
+3. Open *villNumbers.py* and see example 'villNumbers["FF-FLUSH"]'. Copy this
    and rename it. Change the vill numbers as desired and change 'activeVillNumbers'
   at the bottom of the file.
 4. Open *buildOrder.py* and see example 'buildOrders["FF-FLUSH"]'. Copy this
