@@ -18,7 +18,7 @@ buildOrders = { }
 
 # all will consume resources (no free stuff)
 
-buildOrders["FF-SCOUT-FLUSH"] =  [
+buildOrders["FF-FLUSH"] =  [
 
   # houses (16 = 85 pop)
   [0.00, "house", "place"],
