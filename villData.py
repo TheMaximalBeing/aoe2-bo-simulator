@@ -77,6 +77,7 @@ def builderSelection(obj, gameState):
       counts[v.gatherTypeSimple()] += 1
 
   wastedTime2 = copy.deepcopy(wastedTime)
+  wastedTime2 = {k:v/max(1,gameState.villager_distribution[k]) for k,v in wastedTime2.items() }
   if counts["food"] == 0: wastedTime2["food"] += 100000
   if counts["wood"] == 0: wastedTime2["wood"] += 100000
   if counts["stone"] == 0: wastedTime2["stone"] += 100000
@@ -85,13 +86,16 @@ def builderSelection(obj, gameState):
   # decide on F,W,S,G
 
   # !!!!
-  if gameState.done_units["villager"] >= 21:
-    res = "food"
+  # if gameState.done_units["villager"] >= 21:
+    # res = "food"
 
   res = argMinValue(wastedTime2, lambda x: x)
   if obj == "farm": res = "food"
   if obj == "lumber-camp": res = "wood"
   if obj == "mining-camp": res = "gold"
+
+  if wastedTime2[res] < 1000:
+    print(res, obj, wastedTime[res], int(wastedTime["food"]), int(wastedTime["wood"]), gameState.villager_distribution["food"], gameState.villager_distribution["wood"])
 
 
   # get villager of appropriate res
@@ -201,8 +205,11 @@ def switchFVillagers(gameState):
   villCount = gameState.done_units["villager"]
 
   counts = initDict(fullResources, 0)
+  counts2 = initDict(fullResources, 0)
   for v in gameState.villager_states:
     counts[v.gatherType] += 1
+    if v.state != "gather": continue
+    counts2[v.gatherType] += 1
 
   # if any idle farms then populate them
 
@@ -240,37 +247,37 @@ def switchFVillagers(gameState):
     return
 
   # (low-res) sheep -> boar
-  if remaining["sheep"] <= 0 and remaining["boar"] > 50 and counts["sheep"] > 0:
+  if remaining["sheep"] <= 0 and remaining["boar"] > 50 and counts2["sheep"] > 0:
     reassign("sheep", "boar", gameState)
     return
 
   # (low-res) boar -> sheep
-  if remaining["sheep"] > 50 and remaining["boar"] <= 0 and counts["boar"] > 0:
+  if remaining["sheep"] > 50 and remaining["boar"] <= 0 and counts2["boar"] > 0:
     reassign("boar", "sheep", gameState)
     return
 
   # (low-res) boar,sheep -> deer
-  if remaining["sheep"] <= 0 and remaining["boar"] <= 0 and remaining["deer"] > 50 and counts["sheep"] > 0:
+  if remaining["sheep"] <= 0 and remaining["boar"] <= 0 and remaining["deer"] > 50 and counts2["sheep"] > 0:
     reassign("sheep", "deer", gameState)
     return
 
   # (low-res) boar,sheep -> deer
-  if remaining["sheep"] <= 0 and remaining["boar"] <= 0 and remaining["deer"] > 50 and counts["boar"] > 0:
+  if remaining["sheep"] <= 0 and remaining["boar"] <= 0 and remaining["deer"] > 50 and counts2["boar"] > 0:
     reassign("boar", "deer", gameState)
     return
 
   # (low-res) boar,sheep,deer -> berries
-  if remaining["sheep"] <= 0 and remaining["boar"] <= 0 and remaining["deer"] <= 0 and remaining["berries"] > 50 and counts["sheep"] > 0:
+  if remaining["sheep"] <= 0 and remaining["boar"] <= 0 and remaining["deer"] <= 0 and remaining["berries"] > 50 and counts2["sheep"] > 0:
     reassign("sheep", "berries", gameState)
     return
 
   # (low-res) boar,sheep,deer -> berries
-  if remaining["sheep"] <= 0 and remaining["boar"] <= 0 and remaining["deer"] <= 0 and remaining["berries"] > 50 and counts["boar"] > 0:
+  if remaining["sheep"] <= 0 and remaining["boar"] <= 0 and remaining["deer"] <= 0 and remaining["berries"] > 50 and counts2["boar"] > 0:
     reassign("boar", "berries", gameState)
     return
 
   # (low-res) boar,sheep,deer -> berries
-  if remaining["sheep"] <= 0 and remaining["boar"] <= 0 and remaining["deer"] <= 0 and remaining["berries"] > 50 and counts["deer"] > 0:
+  if remaining["sheep"] <= 0 and remaining["boar"] <= 0 and remaining["deer"] <= 0 and remaining["berries"] > 50 and counts2["deer"] > 0:
     reassign("deer", "berries", gameState)
     return
 

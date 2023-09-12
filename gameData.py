@@ -478,11 +478,17 @@ def canAffordUnit(obj, gameState):
 
 def canAffordTech(obj, gameState):
 
+  dropF = 0.
+  dropG = 0.
+  if obj == "feudal-age": dropF = 65
+  if obj == "castle-age": dropF = 95
+  if obj == "castle-age": dropG = 35
+
   cost = getTechCost(obj, gameState)
-  if cost["food"] > max(0,gameState.stockpiles["food"]): return False
+  if cost["food"]-dropF > max(0,gameState.stockpiles["food"]): return False
   if cost["wood"] > max(0,gameState.stockpiles["wood"]): return False
   if cost["stone"] > max(0,gameState.stockpiles["stone"]): return False
-  if cost["gold"] > max(0,gameState.stockpiles["gold"]): return False
+  if cost["gold"]-dropG > max(0,gameState.stockpiles["gold"]): return False
   return True
 
 # -- other getters
@@ -548,7 +554,7 @@ def getGatherRates(gameState):
   result["stone"] = 0.359
   result["sheep"] = 0.330
   # result["farms"] = 0.33 # max 0.40 due to farm res rate
-  result["farms"] = 0.32
+  result["farms"] = 0.335
   result["berries"] = 0.310
 
   # (*) civ-bonuses
@@ -559,7 +565,8 @@ def getGatherRates(gameState):
   
   # (*) tech-bonuses (standerd, unique)
 
-  if gameState.done_techs["double-bit-axe"] > 0: result["wood"] *= 1.2
+  if gameState.done_techs["double-bit-axe"] > 0: 
+    result["wood"] *= 1.2
   # if gameState.done_techs["bow-saw"] > 0: result["wood"] *= 1.2
   # if gameState.done_techs["two-man-saw"] > 0: result["wood"] *= 1.1
   if gameState.done_techs["stone-mining"] > 0: result["stone"] *= 1.15

@@ -19,24 +19,25 @@ class GameState:
     # time step; format: MM.SS
     self.dt = convertToSecs(0.01)
     # end simulation time; format: MM.SS
-    self.endTime = convertToSecs(22.00)
-    # walking-distances
+    # self.endTime = convertToSecs(22.00)
+    self.endTime = convertToSecs(16.00)
+    # walking-distances (note that villagers gather/drop from 1/4 tiles away)
     self.drop_off = {
 
       "sheep":0.5,
       "boar":0.5,
       "deer":1.5,
       "berries":2.5,
-      "farms":2.0,
-      "stone":2.5,
-      "gold":2.5,
-      "wood":3.0 }
+      "farms":1.5,
+      "stone":1.5,
+      "gold":1.5,
+      "wood":1.5 }
     # reassignment penalties
     self.penalties = {
 
       "none"   :{ "sheep":3, "boar":3, "deer":5, "berries":14, "farms":9, "stone":20, "gold":17, "wood":16 },
-      "sheep"  :{ "sheep":0, "boar":0, "deer":3, "berries":14, "farms":7, "stone":20, "gold":17, "wood":6 },
-      "boar"   :{ "sheep":0, "boar":0, "deer":3, "berries":14, "farms":7, "stone":20, "gold":17, "wood":16 },
+      "sheep"  :{ "sheep":0, "boar":0.5, "deer":3, "berries":14, "farms":7, "stone":20, "gold":17, "wood":6 },
+      "boar"   :{ "sheep":0.5, "boar":0, "deer":3, "berries":14, "farms":7, "stone":20, "gold":17, "wood":16 },
       "deer"   :{ "sheep":3, "boar":3, "deer":0, "berries":14, "farms":6, "stone":20, "gold":17, "wood":16 },
       "berries":{ "sheep":10, "boar":10, "deer":10, "berries":0, "farms":6, "stone":20, "gold":17, "wood":16 },
       "farms"  :{ "sheep":3, "boar":3, "deer":3, "berries":7, "farms":0, "stone":20, "gold":17, "wood":16 },
@@ -109,6 +110,7 @@ class GameState:
 
     # ======== saved-stats ========
 
+    self.villager_distribution = initDict(fullResources, 0)
     self.villSpeed = 0
     self.gatherRates = { }
     self.housing_headroom = 0
@@ -126,6 +128,9 @@ class GameState:
     self.rec_stockpiles = [ ]
     self.rec_civilian_pop = [ ]
     self.rec_military_pop = [ ]
+
+    self.useTime = initDict(buildings, 0.0)
+    self.idleTime = initDict(buildings, 0.0)
 
   def applyGameStart(self):
 
@@ -164,6 +169,13 @@ class GameState:
 
   def updateStats(self):
 
+    self.villager_distribution = initDict(fullResources, 0)
+    for v in gameState.villager_states:
+      self.villager_distribution[v.gatherType] += 1
+
+    self.villager_distribution["food"] = sum([v for k,v in self.villager_distribution.items() if k not in ["wood", "stone", "gold"]])
+
+    self.stockpilesGathered["food"] = sum([self.stockpilesGathered[k] for k in self.stockpilesGathered if k not in ["wood", "stone", "gold"]])
     self.population = sum(self.done_units.values())
     self.housing_cap = getHousingCap(self)
     self.farm_count = self.done_buildings["farm"]
@@ -392,6 +404,13 @@ class GameState:
 
     # --- record time on each action
 
+    for k,v in self.done_buildings.items():
+
+      used = v - self.ready_buildings[k]
+      idle = v - used
+      self.useTime[k] += used*self.dt
+      self.idleTime[k] += idle*self.dt
+
     for v in self.villager_states:
 
       if v.state in ["build", "toBuilding", "fromBuilding"]:
@@ -425,26 +444,28 @@ class GameState:
 
       civ_pop = sum([v for k,v in self.done_units.items() if k == "villager"])
       mil_pop = sum([v for k,v in self.done_units.items() if k != "villager"])
-
-      print("--------------------", civ_pop)
-      print("time: ", self.gameTime, " time: ", str(int(self.gameTime // 60)).rjust(2,'0') + ":" + str(int(self.gameTime % 60)).rjust(2,'0'), " civ: ", civ_pop, " mil: ", mil_pop)
-      print("F: ", int(self.stockpiles["food"]), " W: ", int(self.stockpiles["wood"]), " S: " , int(self.stockpiles["stone"]), " G: ", int(self.stockpiles["gold"]))
-      print("techs: ", "  ".join([k for k,v in self.done_techs.items() if v > 0]))
-      print("build: ", "  ".join([k+":"+str(v) for k,v in self.done_buildings.items() if v > 0]))
-
+      remaining = { x:gameState.avaliable_res[x] - gameState.stockpilesGathered[x] for x in fullResources }
       # full vill distribution
       dist = initDict(fullResources, 0)
       for v in self.villager_states:
         if v.gatherType == "none": continue
         dist[v.gatherType] += 1
-      
-      print("vills: ", "  ".join([k+": "+str(v) for k,v in dist.items() if v != 0]))
 
+      print("--------------------", civ_pop)
+      print("time: ", str(int(self.gameTime // 60)).rjust(2,'0') + ":" + str(int(self.gameTime % 60)).rjust(2,'0'), " civ: ", civ_pop, " mil: ", mil_pop,
+            "   F: ", int(self.stockpiles["food"]), " W: ", int(self.stockpiles["wood"]), " S: " , int(self.stockpiles["stone"]), " G: ", int(self.stockpiles["gold"]))
+      print("         techs: ", "  ".join([k for k,v in self.done_techs.items() if v > 0]))
+      print("         units: ", "  ".join([k+":"+str(v) for k,v in self.done_units.items() if v > 0]))
+      print("     buildings: ", "  ".join([k+":"+str(v) for k,v in self.done_buildings.items() if v > 0]))
+      print("idle-buildings: ", "  ".join([k+": "+str(self.idleTime[k])+" ("+str(int(100.*self.idleTime[k]/(self.idleTime[k]+self.useTime[k])))+")" for k in self.idleTime if self.useTime[k] > 0]))
+      print("  distribution: ", "  ".join([k+": "+str(v) for k,v in self.villager_distribution.items() if v != 0]))
+      print(" remaining-res: ", "  ".join([k+": "+str(int(v)) for k,v in remaining.items() if k in ["sheep", "boar", "deer", "berries"]]))
+
+      print("villager activities (percent):")
       for x in self.villagerTimes:
-
         if self.villagerTimes[x]["gather"] == 0.: continue
-
-        print(x+": ", "  ".join([k+": "+str(v) for k,v in self.villagerTimes[x].items()]))
+        total = sum(self.villagerTimes[x].values())
+        print((x+": ").rjust(10), "  ".join([k+": "+str(int(100.*v/total)).ljust(4) for k,v in self.villagerTimes[x].items()]))
 
       # villager times
       # gather-time, drop-time, building-time, reassignment-time, reseed-time
@@ -462,11 +483,12 @@ class GameState:
   def simulate(self):
 
     while self.gameTime < self.endTime:
-
-      self.updateStats()
-      self.updateLists()
-      self.checkBuildOrder()
-      self.updateVillagers()
+      
+      for i in range(2):
+        self.updateStats()
+        self.updateLists()
+        self.checkBuildOrder()
+        self.updateVillagers()
       self.record()
       self.timeStep()
 
