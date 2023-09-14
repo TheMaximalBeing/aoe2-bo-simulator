@@ -136,11 +136,11 @@ class GameState:
 
     self.civ = starting_civ
     self.pop_cap = starting_pop_cap
-    self.avaliable_res |= starting_avail_res
-    self.stockpiles |= starting_stockpiles
-    self.done_techs |= starting_techs
-    self.done_units |= starting_units
-    self.done_buildings |= starting_buildings
+    self.avaliable_res = merge_two_dicts(self.avaliable_res, starting_avail_res)
+    self.stockpiles = merge_two_dicts(self.stockpiles, starting_stockpiles)
+    self.done_techs = merge_two_dicts(self.done_techs, starting_techs)
+    self.done_units = merge_two_dicts(self.done_units, starting_units)
+    self.done_buildings = merge_two_dicts(self.done_buildings, starting_buildings)
 
   # ===== general helpers =====
 

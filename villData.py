@@ -101,7 +101,7 @@ def builderSelection(obj, gameState):
   # get villager of appropriate res
   vill = getVillIndex(res,gameState.villager_states)
 
-  if gameState.villager_states[vill].state != "gather": return -1
+  if vill != -1 and gameState.villager_states[vill].state != "gather": return -1
   
   if vill == -1 and obj == "mining-camp":
     vill = getVillIndex(res,gameState.villager_states)
