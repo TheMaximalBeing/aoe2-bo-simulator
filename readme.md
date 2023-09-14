@@ -47,7 +47,7 @@ With this tool you can answer the following:
 
 ## *Instructions*
 
-* No knowledge of Python is required to get started *
+*No knowledge of Python is required to get started*
 
 1. Install Python (e.g. form python.org) and a suitable text editor such as VS code
 2. open *gameStart.py* and select your civ. Adjust any other info there to your liking
