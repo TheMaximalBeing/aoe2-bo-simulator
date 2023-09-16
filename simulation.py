@@ -321,8 +321,8 @@ class GameState:
 
         elif typee == "unit":
           if not checkUnitAvaliable(name,self.ready_buildings,self): continue
-          if ready_buildings(unitSite[name]) <= 0: continue
-          ready_buildings[unitSite[name]] -= 1
+          if self.ready_buildings(unitSite[name]) <= 0: continue
+          self.ready_buildings[unitSite[name]] -= 1
           self.buyUnit(name)
           self.pending_units.append([name, 0.0, getUnitTime(name, self)])
           del self.bo[i]
@@ -453,6 +453,7 @@ class GameState:
 
       print("--------------------", civ_pop)
       print("time: ", str(int(self.gameTime // 60)).rjust(2,'0') + ":" + str(int(self.gameTime % 60)).rjust(2,'0'), " civ: ", civ_pop, " mil: ", mil_pop,
+            "head: ", self.housing_headroom,
             "   F: ", int(self.stockpiles["food"]), " W: ", int(self.stockpiles["wood"]), " S: " , int(self.stockpiles["stone"]), " G: ", int(self.stockpiles["gold"]))
       print("         techs: ", "  ".join([k for k,v in self.done_techs.items() if v > 0]))
       print("         units: ", "  ".join([k+":"+str(v) for k,v in self.done_units.items() if v > 0]))

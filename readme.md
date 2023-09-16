@@ -61,3 +61,49 @@ With this tool you can answer the following:
    'endTime' here. The drop-off/and reassignment distances are also here, in case you 
    would like to change them.
 6. Run the *simulation.py* file (if using VS code you can just press F5).
+
+## *What do the results mean?*
+
+- The results display the game state every 25 seconds. This includes:
+  - game time MM:SS; civilian population; military population; population headroom; stockpiles
+  - techs researches
+  - units trained
+  - buildings built
+  - idle buildings -- this displays idle time in seconds and as a percentage of total time
+  - villager distribution (i.e. what villagers are gathering)
+  - villager activities (percent time per task per villager type)
+- the activities are as follows
+  - build: building something (including walking to building)
+  - gather: gathering resources
+  - drop: dropping off resources or returning to camp
+  - reassign: walking to resource for first time
+  - reseed: reseeding farm
+  - lure: luring boar
+
+## *What do I look for*
+
+- ensure that buildings, such as the town center, are not going idle. If they are, then
+  adjust your build order before this happens so that you have enough resources. If 
+  military buildings are going idle then consider delaying feudal age.
+- remaining res represents natural food resources on the map. If these go negative then 
+  you have run out and havent built enough farms for your villagers to transition to.
+  You should reassign them elsewhere or build more farms.
+- if stockpiles go too negative then you cannot afford something and should either delay
+  is or adjust you villager numbers. A slightly negative stockpile might be ok if you
+  manually drop off resources.
+- if your economy is imbalnced then change your villager numbers.
+- if stockpiles are floating then consider going feudal faster or adding more farms.
+- Build enough houses so that the population headroom doesn't go negative
+
+## *How do I adjust the build order*
+
+- Use the overwatch (on) request to keep training villagers or military continually. Each
+  request allows 1 more to be trained simultaneously. Use off to cancel 1 overwatch
+- You can used the place request to place a building. It is not recommended to use 
+  overwatch for buildings as they may be blocked by units or  built much later
+  than optimal. If you cant afford them then the problem is with your villager numbers
+  or buying too much stuff.
+- You can use pending to start researching techs. If the building the tech comes from
+  is also training units then you should use overwatch instead (otherwise the building)
+  will do multiple things at once.
+  
