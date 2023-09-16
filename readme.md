@@ -106,5 +106,5 @@ With this tool you can answer the following:
 - You can use pending to start researching techs. If the building that the tech comes from
   is also training units then you should use overwatch instead (otherwise the building)
   will do multiple things at once. The overwatch will wait until the building is free. 
-  For techs, owerwatch will only get the item once.
+  For techs, overwatch will only get the item once.
   
