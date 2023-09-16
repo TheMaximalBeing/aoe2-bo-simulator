@@ -91,7 +91,7 @@ With this tool you can answer the following:
 - If stockpiles go too negative then you cannot afford something and should either delay
   it or adjust you villager numbers. A slightly negative stockpile might be ok if you
   manually drop off resources.
-- If your economy not balanced then change your villager numbers.
+- If your economy is not balanced then change your villager numbers.
 - If stockpiles are floating then consider going feudal faster or add more farms.
 - Build enough houses so that the population headroom doesn't go negative
 
@@ -99,7 +99,7 @@ With this tool you can answer the following:
 
 - Use the overwatch (on) request to keep training villagers/military continuously. Each
   request allows 1 more to be trained simultaneously. Use off to cancel 1 overwatch.
-- You can used the place request to place a building. It is not recommended to use 
+- You can use the place request to place a building. It is not recommended to use 
   overwatch for buildings as they may be blocked by units and built much later
   than ideal. If you cannot afford them then the problem is with your villager numbers
   or buying too much stuff.
