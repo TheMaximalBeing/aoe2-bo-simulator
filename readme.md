@@ -103,8 +103,8 @@ With this tool you can answer the following:
   overwatch for buildings as they may be blocked by units and built much later
   than ideal. If you cannot afford them then the problem is with your villager numbers
   or buying too much stuff.
-- You can use pending to start researching techs. If the building that the tech comes from
-  is also training units then you should use overwatch instead (otherwise the building)
-  will do multiple things at once. The overwatch will wait until the building is free. 
-  For techs, overwatch will only get the item once.
+- You can use the pending request to start researching techs. If the building that the 
+  tech comes from is also training units then you should use overwatch instead (otherwise 
+  the building will do multiple things at once). Overwatch will wait until the 
+  building is free. For techs, overwatch will only get the item once.
   
