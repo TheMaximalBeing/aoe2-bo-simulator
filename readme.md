@@ -80,7 +80,7 @@ With this tool you can answer the following:
   - reseed: reseeding farm
   - lure: luring boar
 
-## *What do I look for*
+## *What do I look for?*
 
 - ensure that buildings, such as the town center, are not going idle. If they are, then
   adjust your build order before this happens so that you have enough resources. If 
@@ -95,7 +95,7 @@ With this tool you can answer the following:
 - if stockpiles are floating then consider going feudal faster or adding more farms.
 - Build enough houses so that the population headroom doesn't go negative
 
-## *How do I adjust the build order*
+## *How do I adjust the build order?*
 
 - Use the overwatch (on) request to keep training villagers or military continually. Each
   request allows 1 more to be trained simultaneously. Use off to cancel 1 overwatch
